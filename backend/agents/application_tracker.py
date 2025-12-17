@@ -34,9 +34,16 @@ class ApplicationTracker:
                 source TEXT,
                 job_url TEXT,
                 date_applied TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                notes TEXT
+                notes TEXT,
+                status TEXT DEFAULT 'Applied'
             )
         ''')
+        
+        # Add status column if it doesn't exist (for existing databases)
+        try:
+            cursor.execute("ALTER TABLE applications ADD COLUMN status TEXT DEFAULT 'Applied'")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         
         # CV uploads table
         cursor.execute('''
@@ -50,6 +57,27 @@ class ApplicationTracker:
         
         conn.commit()
         conn.close()
+    
+    def update_application_status(self, app_id: int, status: str) -> bool:
+        """Update the status of an application."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE applications 
+                SET status = ?
+                WHERE id = ?
+            ''', (status, app_id))
+            
+            updated = cursor.rowcount > 0
+            conn.commit()
+            conn.close()
+            
+            return updated
+        except Exception as e:
+            print(f"Error updating application status: {e}")
+            return False
     
     def track_application(self, job: Dict, notes: str = "") -> int:
         """

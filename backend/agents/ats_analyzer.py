@@ -4,8 +4,11 @@ Analyzes CV and provides an ATS compatibility score (0-100).
 """
 
 import re
+import os
+import json
 from typing import Dict, List
 import spacy
+from openai import OpenAI
 
 
 class ATSAnalyzer:
@@ -18,6 +21,9 @@ class ATSAnalyzer:
         except:
             print("Warning: spaCy model not found. Install with: python -m spacy download en_core_web_sm")
             self.nlp = None
+        
+        # Initialize OpenAI client for detailed recommendations
+        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
         # Action verbs commonly valued in CVs
         self.action_verbs = [
@@ -64,11 +70,15 @@ class ATSAnalyzer:
         # Generate feedback
         feedback = self._generate_feedback(scores, cv_data, target_keywords)
         
+        # Generate detailed recommendations
+        detailed_recommendations = self._generate_detailed_recommendations(cv_data, scores)
+        
         return {
             'total_score': round(total_score),
             'score_breakdown': scores,
             'strengths': feedback['strengths'],
             'improvements': feedback['improvements'],
+            'detailed_recommendations': detailed_recommendations,
             'grade': self._get_grade(total_score)
         }
     
@@ -243,6 +253,91 @@ class ATSAnalyzer:
             'strengths': strengths,
             'improvements': improvements
         }
+    
+    def _generate_detailed_recommendations(self, cv_data: Dict, scores: Dict) -> List[Dict]:
+        """Generate detailed, actionable recommendations with specific text replacements."""
+        try:
+            # Build context for OpenAI
+            cv_sections = {
+                'summary': cv_data.get('summary', ''),
+                'experience': '\n'.join(cv_data.get('experience', [])),
+                'education': '\n'.join(cv_data.get('education', [])),
+                'skills': ', '.join(cv_data.get('skills', []))
+            }
+            
+            prompt = f"""Analyze this CV and provide 3-5 specific, actionable text improvement recommendations.
+
+CV Content:
+Summary: {cv_sections['summary']}
+Experience: {cv_sections['experience']}
+Skills: {cv_sections['skills']}
+
+Current ATS Scores:
+- Action Verbs: {scores.get('action_verbs', 0)}/15
+- Achievements: {scores.get('achievements', 0)}/15
+- Keywords: {scores.get('keywords', 0)}/25
+
+For each recommendation, provide:
+1. Section name (Summary, Experience, Skills, etc.)
+2. Current text excerpt (exact quote from CV, 10-20 words)
+3. Recommended replacement text
+4. Reason for change
+5. Priority (high, medium, or low)
+
+Return ONLY a valid JSON array with this structure:
+[
+  {{
+    "section": "Experience",
+    "current_text": "Worked on projects",
+    "recommended_text": "Led cross-functional team on 5+ high-impact projects, delivering results 30% ahead of schedule",
+    "reason": "Adds action verbs, quantifiable achievements, and impact metrics",
+    "priority": "high"
+  }}
+]
+
+Focus on:
+- Adding strong action verbs
+- Including quantifiable metrics
+- Improving keyword density
+- Making achievements more impactful"""
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are an expert CV coach and ATS optimization specialist. Provide specific, actionable feedback."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=1500
+            )
+            
+            # Parse JSON response
+            recommendations_text = response.choices[0].message.content.strip()
+            # Remove markdown code blocks if present
+            recommendations_text = re.sub(r'```json\n?', '', recommendations_text)
+            recommendations_text = re.sub(r'```\n?', '', recommendations_text)
+            
+            recommendations = json.loads(recommendations_text)
+            
+            # Ensure we have valid recommendations
+            if not isinstance(recommendations, list):
+                return []
+            
+            # Limit to top 5 recommendations
+            return recommendations[:5]
+            
+        except Exception as e:
+            print(f"Error generating detailed recommendations: {str(e)}")
+            # Return fallback recommendations
+            return [
+                {
+                    "section": "Summary",
+                    "current_text": "Review your professional summary",
+                    "recommended_text": "Add 2-3 sentences highlighting your top achievements and skills",
+                    "reason": "A strong summary improves ATS ranking and recruiter engagement",
+                    "priority": "high"
+                }
+            ]
     
     def _get_grade(self, score: float) -> str:
         """Convert numerical score to letter grade."""

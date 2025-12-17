@@ -15,8 +15,9 @@ class CoverLetterGenerator:
     """Generates tailored cover letters for job applications using AI."""
     
     def __init__(self):
+        """Initialize the cover letter generator with OpenAI."""
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.model = "gpt-4"  # or "gpt-3.5-turbo" for faster/cheaper
+        self.model = "gpt-4o-mini"  # Using gpt-4o-mini for faster, cost-effective generation  # or "gpt-3.5-turbo" for faster/cheaper
     
     def generate(self, cv_data: Dict, job: Dict, tone: str = "professional") -> Dict:
         """

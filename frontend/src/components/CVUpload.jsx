@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Upload, FileText, CheckCircle, AlertCircle, Trash2 } from 'lucide-react'
+import { Upload, FileText, CheckCircle, AlertCircle, Trash2, Copy } from 'lucide-react'
 
 const API_BASE = 'http://localhost:8000/api'
 
@@ -317,12 +317,75 @@ function ATSResults({ result, onContinueToSearch }) {
                 </div>
             )}
 
-            {/* Improvements */}
-            {result.improvements.length > 0 && (
+            {/* Detailed Recommendations */}
+            {result.detailed_recommendations && result.detailed_recommendations.length > 0 && (
+                <div>
+                    <h4 className="flex items-center font-semibold text-gray-900 mb-3">
+                        <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
+                        Detailed Recommendations
+                    </h4>
+                    <div className="space-y-3">
+                        {result.detailed_recommendations.map((rec, idx) => (
+                            <div key={idx} className="border rounded-lg overflow-hidden">
+                                {/* Header with Section and Priority */}
+                                <div className="bg-gray-50 px-3 py-2 flex items-center justify-between border-b">
+                                    <span className="text-sm font-medium text-gray-700">
+                                        📍 {rec.section}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${rec.priority === 'high'
+                                            ? 'bg-red-100 text-red-700'
+                                            : rec.priority === 'medium'
+                                                ? 'bg-yellow-100 text-yellow-700'
+                                                : 'bg-blue-100 text-blue-700'
+                                        }`}>
+                                        {rec.priority.toUpperCase()}
+                                    </span>
+                                </div>
+
+                                {/* Current Text */}
+                                <div className="p-3 bg-red-50 border-b border-red-200">
+                                    <p className="text-xs font-semibold text-red-800 mb-1">Current:</p>
+                                    <p className="text-sm text-gray-800 line-through">{rec.current_text}</p>
+                                </div>
+
+                                {/* Recommended Text */}
+                                <div className="p-3 bg-green-50 border-b border-green-200">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <p className="text-xs font-semibold text-green-800 mb-1">Recommended:</p>
+                                            <p className="text-sm text-gray-900">{rec.recommended_text}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(rec.recommended_text)
+                                                // Could add toast notification here
+                                            }}
+                                            className="ml-2 p-1.5 hover:bg-green-200 rounded transition-colors"
+                                            title="Copy recommended text"
+                                        >
+                                            <Copy className="w-4 h-4 text-green-700" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Reason */}
+                                <div className="p-3 bg-white">
+                                    <p className="text-xs text-gray-600 italic">
+                                        💡 {rec.reason}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* General Improvements (fallback) */}
+            {result.improvements && result.improvements.length > 0 && (!result.detailed_recommendations || result.detailed_recommendations.length === 0) && (
                 <div>
                     <h4 className="flex items-center font-semibold text-gray-900 mb-2">
                         <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
-                        Improvements
+                        General Improvements
                     </h4>
                     <ul className="space-y-2">
                         {result.improvements.slice(0, 5).map((improvement, idx) => (

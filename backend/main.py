@@ -267,6 +267,21 @@ async def get_applications():
         raise HTTPException(status_code=500, detail=f"Error retrieving applications: {str(e)}")
 
 
+@app.put("/api/applications/{app_id}/status")
+async def update_application_status(app_id: int, request: dict):
+    """Update the status of an application."""
+    try:
+        new_status = request.get('status')
+        success = application_tracker.update_application_status(app_id, new_status)
+        
+        if success:
+            return {"success": True, "status": new_status}
+        else:
+            raise HTTPException(status_code=404, detail="Application not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/dashboard-stats")
 async def get_dashboard_stats():
     """

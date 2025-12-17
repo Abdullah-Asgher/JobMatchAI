@@ -7,17 +7,29 @@ import CoverLetterModal from './CoverLetterModal'
 
 const API_BASE = 'http://localhost:8000/api'
 
-export default function JobSearch({ cvFile, atsResult }) {
-    const [jobTitle, setJobTitle] = useState('')
-    const [location, setLocation] = useState('')
+export default function JobSearch({ cvFile, atsResult, persistedState, onStateChange }) {
+    const [jobTitle, setJobTitle] = useState(persistedState?.searchParams?.jobTitle || '')
+    const [location, setLocation] = useState(persistedState?.searchParams?.location || '')
     const [radiusMiles, setRadiusMiles] = useState(20)
-    const [jobs, setJobs] = useState([])
-    const [filteredJobs, setFilteredJobs] = useState([])
+    const [jobs, setJobs] = useState(persistedState?.jobs || [])
+    const [filteredJobs, setFilteredJobs] = useState(persistedState?.jobs || [])
     const [searching, setSearching] = useState(false)
-    const [filters, setFilters] = useState({})
+    const [filters, setFilters] = useState(persistedState?.filters || {})
     const [showFilters, setShowFilters] = useState(false)
     const [selectedJob, setSelectedJob] = useState(null)
     const [showCoverLetter, setShowCoverLetter] = useState(false)
+
+    // Sync state back to parent when jobs or filters change
+    useEffect(() => {
+        if (onStateChange) {
+            onStateChange({
+                jobs,
+                searchParams: { jobTitle, location },
+                filters,
+                loading: searching
+            })
+        }
+    }, [jobs, jobTitle, location, filters, searching])
 
     const searchJobs = async () => {
         if (!jobTitle || !location) return

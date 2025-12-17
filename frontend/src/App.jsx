@@ -11,6 +11,14 @@ function App() {
     const [atsResult, setAtsResult] = useState(null)
     const [uploadedCVData, setUploadedCVData] = useState(null) // Store full upload result
 
+    // Job search persistence state
+    const [jobSearchState, setJobSearchState] = useState({
+        jobs: [],
+        searchParams: { jobTitle: '', location: '' },
+        filters: {},
+        loading: false
+    })
+
     const handleDeleteCV = () => {
         setCvFile(null)
         setAtsResult(null)
@@ -83,7 +91,12 @@ function App() {
                 )}
 
                 {currentView === 'search' && (
-                    <JobSearch cvFile={cvFile} atsResult={atsResult} />
+                    <JobSearch
+                        cvFile={cvFile}
+                        atsResult={atsResult}
+                        persistedState={jobSearchState}
+                        onStateChange={setJobSearchState}
+                    />
                 )}
 
                 {currentView === 'dashboard' && (
